@@ -28,7 +28,7 @@ def select_laps(first, second):
             l = data[i]['lap'][len(data[i]['lap'])-1]+1
             print('(%d) lap %d: ' % ((i+1), l), str(int(int(time/1000)/60))+':'+str(int(time/1000) % 60).zfill(2)+':'+str(time % 1000).zfill(3))
     else: print('Error - Data not loaded!')
-    first=int(input('Select first lap (default: %d): ' % first) or first) ### TODO implement error handling
+    first=int(input('Select first lap (default: %d): ' % first) or first)
     second=int(input('Select second lap (default: %d): ' % second) or second)
     return(first, second)
 
@@ -38,7 +38,7 @@ def select_metrics(first, second):
     print('Metrics available:')
     for i in range(0,len(metrics)):
         print('%d: %s' % (i, metrics[i]))
-    first=int(input('Select metric id (default: %s): ' % first) or first) ### 20200505_lap11.csv
+    first=int(input('Select metric id (default: %s): ' % first) or first)
     second=int(input('Select metric id (default: %s): ' % second) or second)
     return(metrics[first], metrics[second])
 
@@ -47,7 +47,6 @@ def plot_laps(label_1, label_2, ref1, lap1_metric1, lap1_metric2,
                 ref2, lap2_metric1, lap2_metric2,):
     
     ### TODO add labels for the laps presented (time), improve presentation
-    
     fig, ax1 = plt.subplots()
     
     ### set x axis
@@ -60,10 +59,10 @@ def plot_laps(label_1, label_2, ref1, lap1_metric1, lap1_metric2,
     ### set first metric (y axis)
     color = 'r-'
     ax1.set_ylabel(label_1, color='tab:red')
-    ax1.set_ylim(metric_params[label_1]['offset'], metric_params[label_1]['limit'])##TODO
+    ax1.set_ylim(metric_params[label_1]['offset'], metric_params[label_1]['limit'])
     ax1.tick_params(axis='y', labelcolor='tab:red')
-    ax1.set_yticks(np.arange(0, metric_params[label_1]['limit'], metric_params[label_1]['spacing']))## TODO
-    ax1.set_yticks(np.arange(0, metric_params[label_1]['limit'], 5), minor=True)##TODO
+    ax1.set_yticks(np.arange(0, metric_params[label_1]['limit'], metric_params[label_1]['spacing']))
+    ax1.set_yticks(np.arange(0, metric_params[label_1]['limit'], 5), minor=True)
 
     ax1.plot(ref1, lap1_metric1, color, ref2, lap2_metric1, 'r--')
 
@@ -90,11 +89,11 @@ def save_lap(default):
             print('(%d) lap %d: ' % ((i+1), l), str(int(int(time/1000)/60))+':'+str(int(time/1000) % 60).zfill(2)+':'+str(time % 1000).zfill(3))
     else: 
         print('Error - Data not loaded!')
-        exit() ### TODO 
+        return 
     lap=int(input('Select the lap to save (default: %d): ' % default) or default)
     default_file = date.today().strftime("%Y%m%d")+'_lap'+str(data[lap-1]['lap'][len(data[lap-1]['lap'])-1]+1)+'.csv'
     filename=input('insert name of the file (default: %s): ' % default_file) or default_file
-    with open(filename, 'w') as writer: ### TODO move loop into a separate function
+    with open(filename, 'w') as writer:
         for i in range(0,len(data[lap-1]['position'])):
             line=''
             line += str(data[lap-1]['position'][i])+';'
@@ -107,6 +106,45 @@ def save_lap(default):
             writer.write(line)
         ### add the end of lap line (prevent error in reading the file standalone)
         writer.write('0.00000;0.0;0;0.0;0.0;0;0\n')
+
+def load_lap(laps_count,best_time):
+    count=laps_count
+    last_position=2.0
+    last_lap =-1
+    best_lap =-1
+    #best_time=90000000
+    filename=input('insert full name of the lap file: ')
+    with open(filename, 'r') as reader:
+        for line in reader:
+            current_lap=int(line.split(';')[6])
+            current_position=float(line.split(';')[0])
+            ##if current_lap != last_lap: ## just changed lap
+            if (current_position < last_position and last_position > 0.99) : ## just changed lap or it's first lap
+                count+=1
+                if last_lap != -1:  ## not execute on first lap loaded
+                    data.append(metrics)
+                    if best_time > metrics['time'][len(metrics['time'])-1]: ## set best_time
+                        best_time= metrics['time'][len(metrics['time'])-1]
+                        best_lap=count-1
+                metrics=dict(zip(labels, [[],[],[],[],[],[],[]]))
+            metrics['position'].append(float(line.split(';')[0]))
+            metrics['speed'].append(float(line.split(';')[1]))
+            metrics['time'].append(int(line.split(';')[2]))
+            metrics['gas'].append(float(line.split(';')[3]))
+            metrics['brake'].append(float(line.split(';')[4]))
+            metrics['gear'].append(int(line.split(';')[5])-1)## to match the right gear
+            metrics['lap'].append(current_lap)
+            last_lap=current_lap
+            last_position=current_position
+
+    laps_count=count-1 ## last lap in file do not count
+    best_time_s= str(int(int(best_time/1000)/60))+':'+str(int(best_time/1000) % 60)+':'+str(best_time % 1000)
+
+    laps_prompt='''Laps loaded: %d
+    Best lap time (%d): %s
+    '''
+    print(laps_prompt % (laps_count, best_lap, best_time_s))
+
 
 
 ####### Main program  ##########
@@ -124,7 +162,7 @@ if __name__ == "__main__":
     best_lap =-1
     best_time=90000000
     ## read data
-    with open(data_file, 'r') as reader: ### TODO move loop into a separate function
+    with open(data_file, 'r') as reader:
         for line in reader:
             current_lap=int(line.split(';')[6])
             current_position=float(line.split(';')[0])
@@ -137,7 +175,6 @@ if __name__ == "__main__":
                         best_time= metrics['time'][len(metrics['time'])-1]
                         best_lap=count-1
                 metrics=dict(zip(labels, [[],[],[],[],[],[],[]]))
-            ## TODO optimise read from file
             metrics['position'].append(float(line.split(';')[0]))
             metrics['speed'].append(float(line.split(';')[1]))
             metrics['time'].append(int(line.split(';')[2]))
@@ -167,26 +204,26 @@ if __name__ == "__main__":
     (L) Select laps to compare
     (M) Select metric(s) to present (current: %s & %s)
     (S) Save a lap on file
-    (L) Load a lap from file (added at the end)
+    (O) Load a lap from file (added as last)
     (Q) Quit Application
     '''
 
     while 1:
         print(selection_prompt % (lap_sel_1, lap_sel_2, metric_1, metric_2))
         inp = input('? ')
-        if inp in ('P', 'p'):### TODO optimize selection (switch?)
+        if inp in ('P', 'p'):
             plot_laps(metric_1, metric_2, 
                 data[lap_sel_1-1]['position'], data[lap_sel_1-1][metric_1], data[lap_sel_1-1][metric_2],
                 data[lap_sel_2-1]['position'], data[lap_sel_2-1][metric_1], data[lap_sel_2-1][metric_2])
-        if inp in ('L','l'):
+        elif inp in ('L','l'):
             lap_sel_1, lap_sel_2 = select_laps(lap_sel_1, lap_sel_2)
-        if inp in ('M','m'):
+        elif inp in ('M','m'):
             metric_1, metric_2 = select_metrics(metric_1, metric_2)
-        if inp in ('S', 's'):
+        elif inp in ('S', 's'):
             save_lap(lap_sel_1)
-        if inp in ('L', 'l'): ## TODO
-            print('WIP - Function not implemented yet')
-        if inp in ('Q', 'q'):
+        elif inp in ('O', 'o'):
+            load_lap(laps_count, best_time)
+        elif inp in ('Q', 'q'):
             exit()
-        if inp not in ('P','Q', 'S', 'L','M'):
+        else:
             print('Selection not valid')
